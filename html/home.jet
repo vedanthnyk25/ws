@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1, maximum-scale=1">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Modern Chat App</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta1/dist/css/bootstrap.min.css" rel="stylesheet"
+          integrity="sha384-giJF6kkoqNQ00vy+HMDP7azOuL0xtbfIcaT9wjKHr8RbDVddVHyTfAAsrekwKmP1" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/notie/4.3.1/notie.min.css"
+          integrity="sha512-UrjLcAek5jbj1vwGbXkviPHtgSNVNQCedX7cBIMDdSI2iZtUcZcoTh2Sqc8R9mVcijOjFUi1IlxhfrE1uWaIog=="
+          crossorigin="anonymous"/>
+
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-family: "Segoe UI", Roboto, sans-serif;
+        }
+
+        h1, h3 {
+            color: #343a40;
+        }
+
+        .chatbox {
+            border: 1px solid #dee2e6;
+            border-radius: 0.5rem;
+            background-color: #fff;
+            min-height: 200px;
+            max-height: 400px;
+            overflow-y: auto;
+            padding: 1rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+
+        #status span {
+            font-size: 0.9rem;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        #sendBtn {
+            margin-top: 0.5rem;
+        }
+
+        #online_users {
+            list-style: none;
+            padding: 0;
+        }
+
+        #online_users li {
+            padding: 0.5em 0.8em;
+            border-radius: 5px;
+            background-color: #e9ecef;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            transition: background-color 0.2s ease-in-out;
+        }
+
+        #online_users li:hover {
+            background-color: #ced4da;
+        }
+
+        #status {
+            font-weight: 500;
+            margin-top: 1rem;
+        }
+
+        .chat-message {
+            margin-bottom: 0.5rem;
+        }
+
+        .chat-message strong {
+            color: #007bff;
+        }
+    </style>
+</head>
+<body>
+<div class="container mt-4">
+    <div class="row">
+        <div class="col">
+            <h1>Welcome to the Chat</h1>
+            <hr>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-12 col-md-8">
+            <h3>Chat</h3>
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input type="text" name="username" class="form-control" id="username" autocomplete="off" placeholder="Enter username">
+            </div>
+            <div class="form-group">
+                <label for="message">Message</label>
+                <input type="text" name="message" class="form-control" id="message" placeholder="Enter message">
+            </div>
+            <a href="javascript:void(0)" class="btn btn-primary" id="sendBtn">Send Message</a>
+
+            <input type="hidden" name="action" id="action">
+            <div id="status" class="mt-2 float-end"></div>
+            <div id="output" class="chatbox mt-4"></div>
+        </div>
+        <div class="col-12 col-md-4 mt-4 mt-md-0">
+            <h3 class="mx-4">Who's Online</h3>
+            <ul id="online_users"></ul>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta1/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-ygbV9kiqUc6oa4msXn9868pTtWMgiQaeYH7/t7LECLbyPA2x65Kgf80OJFdroafW"
+        crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/notie/4.3.1/notie.min.js"
+        integrity="sha512-NHRCwRf2LnVSlLDejCA9oS3fG3/FLSQIPCjAWl3M7tVi5wszwr6FxkjotWnQDXLE+aLKcxRrzFDNEgXj9nvkPw=="
+        crossorigin="anonymous"></script>
+<script src="/static/reconnecting-websocket.min.js"></script>
+
+<script>
+    let socket = null;
+    let o = document.getElementById("output");
+    let userField = document.getElementById("username");
+    let messageField = document.getElementById("message");
+
+    window.onbeforeunload = function () {
+        let jsonData = {};
+        jsonData["action"] = "left";
+        socket.send(JSON.stringify(jsonData));
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        socket = new ReconnectingWebSocket("ws://localhost:8080/ws", null, {debug: true, reconnectInterval: 300});
+        
+        const offline = '<span class="badge bg-danger">Offline</span>';
+        const online = '<span class="badge bg-success">Connected</span>';
+        let statusDiv = document.getElementById("status");
+
+        socket.onopen = () => {
+            console.log("Successfully connected");
+            statusDiv.innerHTML = online;
+        }
+        socket.onclose = () => {
+            console.log("Connection closed");
+            statusDiv.innerHTML = offline;
+        }
+        socket.onerror = error => {
+            console.log(error);
+            statusDiv.innerHTML = offline;
+        }
+
+        socket.onmessage = msg => {
+            let data = JSON.parse(msg.data);
+            switch (data.action) {
+                case "list_users":
+                    let ul = document.getElementById("online_users");
+                    while (ul.firstChild) {
+                        ul.removeChild(ul.firstChild);
+                    }
+                    if (data.connected_users.length > 0) {
+                        data.connected_users.forEach(function (item) {
+                            let li = document.createElement("li");
+                            li.textContent = item;
+                            ul.appendChild(li);
+                        });
+                    }
+                    break;
+
+                case "broadcast":
+                    const messageHTML = `
+                        <div class="chat-message">
+                            <strong>${data.username}:</strong> ${data.message}
+                        </div>
+                    `;
+                    o.innerHTML += messageHTML;
+                    o.scrollTop = o.scrollHeight;
+                    break;
+            }
+        }
+
+        userField.addEventListener("change", function () {
+            let jsonData = {};
+            jsonData["action"] = "username";
+            jsonData["username"] = this.value;
+            socket.send(JSON.stringify(jsonData));
+        });
+
+        messageField.addEventListener("keydown", function (e) {
+            if (e.code === "Enter") {
+                if (!socket) {
+                    console.log("No connection");
+                    return false;
+                }
+                if ((userField.value === "") || (messageField.value === "")) {
+                    errorMessage("Please enter username and message");
+                    return false;
+                }
+                e.preventDefault();
+                e.stopPropagation();
+                sendMessage();
+            }
+        });
+
+        document.getElementById("sendBtn").addEventListener("click", function () {
+            if ((userField.value === "") || (messageField.value === "")) {
+                errorMessage("Please enter username and message");
+                return false;
+            } else {
+                sendMessage();
+            }
+        });
+    });
+
+    function sendMessage() {
+        let jsonData = {
+            action: "broadcast",
+            username: userField.value,
+            message: messageField.value
+        };
+        socket.send(JSON.stringify(jsonData));
+        messageField.value = "";
+    }
+
+    function errorMessage(msg) {
+        notie.alert({
+            type: 'error',
+            text: msg,
+            time: 3,
+        });
+    }
+</script>
+</body>
+</html>
