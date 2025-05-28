@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"net/http"
+	"os"
 	"ws/internal/handlers"
 )
 
@@ -12,7 +13,15 @@ func main() {
 	log.Println("Listening to the channel")
 	go handlers.ListenToWsChannel()
 
-	log.Println("Staring web server on port 8080")
+	
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080" // Default for local dev
+	}
 
-	_ = http.ListenAndServe(":8080", mux)
+	log.Println("Starting web server on port", port)
+	err := http.ListenAndServe(":"+port, mux)
+	if err != nil {
+		log.Fatal("ListenAndServe error:", err)
+	}
 }

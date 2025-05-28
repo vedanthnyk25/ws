@@ -130,7 +130,12 @@
     }
 
     document.addEventListener("DOMContentLoaded", function () {
-        socket = new ReconnectingWebSocket("ws://localhost:8080/ws", null, {debug: true, reconnectInterval: 300});
+        let protocol = location.protocol === "https:" ? "wss://" : "ws://";
+        let host = location.host; // includes hostname + port
+        let socketUrl = `${protocol}${host}/ws`;
+
+        let socket = new ReconnectingWebSocket(socketUrl, null, {debug: true, reconnectInterval: 300});
+
         
         const offline = '<span class="badge bg-danger">Offline</span>';
         const online = '<span class="badge bg-success">Connected</span>';
