@@ -174,7 +174,7 @@
                 case "broadcast":
                     const messageHTML = `
                         <div class="chat-message">
-                            <strong>${data.username}:</strong> ${data.message}
+                            </strong> ${data.message}
                         </div>
                     `;
                     o.innerHTML += messageHTML;
