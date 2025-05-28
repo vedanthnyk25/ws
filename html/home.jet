@@ -172,12 +172,7 @@
                     break;
 
                 case "broadcast":
-                    const messageHTML = `
-                        <div class="chat-message">
-                            </strong> ${data.message}
-                        </div>
-                    `;
-                    o.innerHTML += messageHTML;
+                    o.innerHTML= o.innerHTML + data.message + "<br>";
                     o.scrollTop = o.scrollHeight;
                     break;
             }
